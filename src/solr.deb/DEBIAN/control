@@ -1,0 +1,11 @@
+Package: solr
+Version: 8.11.1
+Section: misc
+Priority: optional
+Architecture: all
+Depends: default-jre-headless,hunspell-de-de-frami,hunspell-hu
+Installed-Size: 100
+Maintainer: Markus Mandalka <debian@mandalka.name>
+Homepage: https://opensemanticsearch.org/
+Description: Preconfigurated Solr
+ starting as a daemon

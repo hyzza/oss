@@ -1,0 +1,75 @@
+#!/bin/sh
+# postinst script for webapps
+
+# export static files to directory for webserver
+python3 /var/lib/opensemanticsearch/manage.py collectstatic --noinput
+
+# create directory for DB and file uploads
+mkdir /var/opensemanticsearch
+mkdir /var/opensemanticsearch/db
+mkdir /var/opensemanticsearch/media
+
+# allow Django running in apache2 context to read and write uploaded files
+chown -R www-data:www-data /var/opensemanticsearch
+
+# if upgrading from old directory structure, move DB to new destination
+if [ -f /var/lib/opensemanticsearch/db.sqlite3 ]; then
+  mv /var/lib/opensemanticsearch/db.sqlite3 /var/opensemanticsearch/db/db.sqlite3
+fi
+if [ -d /var/opensemanticsearch/ontologies ]; then
+  mv /var/opensemanticsearch/ontologies /var/opensemanticsearch/media/
+fi
+if [ -d /var/opensemanticsearch/thumbnails ]; then
+  mv /var/opensemanticsearch/thumbnails /var/opensemanticsearch/media/
+fi
+if [ -d /var/opensemanticsearch/csv ]; then
+  mv /var/opensemanticsearch/csv /var/opensemanticsearch/media/
+fi
+
+# create or upgrade DB
+python3 /var/lib/opensemanticsearch/manage.py migrate
+
+# allow Django running in apache2 context to read and write to DB
+chown www-data:www-data /var/opensemanticsearch/db/db.sqlite3
+
+# but others should not be able to read DB entries
+chmod o-r /var/opensemanticsearch/db/db.sqlite3
+
+# allow Django running in apache2 context to write facets config
+chgrp www-data /etc/opensemanticsearch/facets
+chmod g+r /etc/opensemanticsearch/facets
+chmod g+w /etc/opensemanticsearch/facets
+
+# allow Django running in apache2 context to write ETL config
+chgrp www-data /etc/opensemanticsearch/etl-webadmin
+chmod g+r /etc/opensemanticsearch/etl-webadmin
+chmod g+w /etc/opensemanticsearch/etl-webadmin
+
+# allow Django running in apache2 context to write UI config
+chgrp www-data /etc/solr-php-ui/config.webadmin.php
+chmod g+r /etc/solr-php-ui/config.webadmin.php
+chmod g+w /etc/solr-php-ui/config.webadmin.php
+
+# enable apache2 module for Django
+a2enmod wsgi
+
+# reload apache configs to enable our additional apache settings
+service apache2 restart
+
+# setup facets/classes in Open Semantic ETL config and entities in Open Semantic Entity Search API
+python3 /var/lib/opensemanticsearch/manage.py entities
+
+# write Open Semantic ETL config and Solr PHP UI config by settings of web admin ui / in Django DB
+python3 /var/lib/opensemanticsearch/manage.py configs
+
+# allow Django running in apache2 context to write OCR dictionary
+chown www-data:www-data /etc/opensemanticsearch/ocr/dictionary.txt
+chmod o+r /etc/opensemanticsearch/ocr/dictionary.txt
+
+# set rights of cron table
+chown root:root /etc/cron.d/open-semantic-search
+
+# load our cron table
+service cron restart
+
+exit 0

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+adduser --system --disabled-password tika
+groupadd -f tesseract_cache
+usermod -a -G tesseract_cache tika
+
+# rights for OCR cache
+chown tika:tesseract_cache /var/cache/tesseract
+chmod 770 /var/cache/tesseract
+
+# load our additional service config
+systemctl daemon-reload
+
+# start while booting
+systemctl enable tika
+systemctl enable tika-fake-ocr
+
+# (re)start after installation
+systemctl restart tika
+systemctl restart tika-fake-ocr

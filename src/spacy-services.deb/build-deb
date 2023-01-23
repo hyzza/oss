@@ -1,0 +1,22 @@
+#/bin/sh
+
+VERSION=`date +%y.%m.%d`
+PACKAGE=spacy-services.deb_${VERSION}.deb
+BUILDDIR=/tmp/spacy-$$.deb
+
+
+#
+# Build standard package (preconfigured for Solr)
+#
+
+echo "Building ${PACKAGE} in temp directory ${BUILDDIR}"
+
+mkdir ${BUILDDIR}
+cp -a DEBIAN ${BUILDDIR}/
+cp -a etc ${BUILDDIR}/
+chown -R root:root ${BUILDDIR}/etc/
+mkdir -p ${BUILDDIR}/usr/lib/python3/dist-packages/spacy-services
+cp -a src/spacy-services/* ${BUILDDIR}/usr/lib/python3/dist-packages/spacy-services/
+
+# Build package
+dpkg -b ${BUILDDIR} ${PACKAGE}

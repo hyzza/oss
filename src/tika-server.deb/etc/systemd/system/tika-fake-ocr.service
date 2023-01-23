@@ -1,0 +1,13 @@
+[Unit]
+Description=Apache Tika Server
+After=network.target
+
+[Service]
+Type=simple
+User=tika
+Environment=OMP_THREAD_LIMIT=1
+ExecStart=/usr/bin/java -jar /usr/share/java/tika-server-standard.jar --port 9999 --config /etc/tika/tika-config-fakecache.xml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

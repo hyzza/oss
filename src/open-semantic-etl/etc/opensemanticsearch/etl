@@ -1,0 +1,289 @@
+# -*- coding: utf-8 -*-
+
+#
+# ETL config for connector(s)
+#
+
+# print debug messages
+#config['verbose'] = True
+
+
+#
+# Languages for language specific index
+#
+# Each document is analyzed without grammar rules in the index fields like content, additionally it can be added/copied to language specific index fields/analyzers
+# Document language is autodetected by default plugin enhance_detect_language_tika_server
+
+# If index support enhanced analytics for specific languages, we can add/copy data to language specific fields/analyzers
+# Set which languages are configured and shall be used in index for language specific analysis/stemming/synonyms
+# Default / if not set all languages that are supported will be analyzed additionally language specific
+#config['languages'] = ['en','de','fr','hu','it','pt','nl','cz','ro','ru','ar','fa']
+
+# force to language specific analysis additional in this language(s) grammar & synonyms, even if language autodetection detects other language
+#config['languages_force'] = ['en','de']
+
+
+# only use language for language specific analysis which are added / uncommented later
+#config['languages'] = []
+
+# add English
+#config['languages'].append('en')
+
+# add German / Deutsch
+#config['languages'].append('de')
+
+# add French / Francais
+#config['languages'].append('fr')
+
+# add Hungarian
+#config['languages'].append('hu')
+
+# add Spanish
+#config['languages'].append('es')
+
+# add Portuguese
+#config['languages'].append('pt')
+
+# add Italian
+#config['languages'].append('it')
+
+# add Czech
+#config['languages'].append('cz')
+
+# add Dutch
+#config['languages'].append('nl')
+
+# add Romanian
+#config['languages'].append('ro')
+
+# add Russian
+#config['languages'].append('ru')
+
+
+
+#
+# Index/storage
+#
+
+#
+# Solr URL and port
+#
+
+config['export'] = 'export_solr'
+
+# Solr server
+config['solr'] = 'http://localhost:8983/solr/'
+
+# Solr core
+config['index'] = 'opensemanticsearch'
+
+
+#
+# Elastic Search
+#
+
+#config['export'] = 'export_elasticsearch'
+
+# Index
+#config['index'] = 'opensemanticsearch'
+
+
+#
+# Tika for text and metadata extraction
+#
+
+# Tika server (with tesseract-ocr-cache)
+# default: http://localhost:9998
+
+#config['tika_server'] = 'http://localhost:9998'
+
+# Tika server with fake OCR cache of tesseract-ocr-cache used if OCR in later ETL tasks
+# default: http://localhost:9999
+
+#config['tika_server_fake_ocr'] = 'http://localhost:9999'
+
+
+#
+# Annotations
+#
+
+# add plugin for annotation/tagging/enrichment of documents
+config['plugins'].append('enhance_annotations')
+
+# set alternate URL of annotation server
+#config['metadata_server'] = 'http://localhost/search-apps/annotate/json'
+
+
+#
+# RDF Knowledge Graph
+#
+
+# add RDF Metadata Plugin for granular import of RDF file statements to entities of knowledge graphs
+config['plugins'].append('enhance_rdf')
+
+
+#
+# Config for OCR (automatic text recognition of text in images)
+#
+
+# Disable OCR for image files (i.e for more performance and/or because you don't need the text within images or have only photos without photographed text)
+#config['ocr'] = False
+
+# Option to disable OCR of embedded images in PDF by Tika
+# so (if alternate plugin is enabled) OCR will be done only by alternate
+# plugin enhance_pdf_ocr (which else works only as fallback, if Tika exceptions)
+#config['ocr_pdf_tika'] = False
+
+# Use OCR cache
+config['ocr_cache'] = '/var/cache/tesseract'
+
+# Option to disable OCR cache
+#config['ocr_cache'] = None
+
+# Do OCR for images embedded in PDF documents (i.e. designed images or scanned or photographed documents)
+config['plugins'].append('enhance_pdf_ocr')
+
+#OCR language
+
+#If other than english you have to install package tesseract-XXX (tesseract language support) for your language
+#and set ocr_lang to this value (be careful, the tesseract package for english is "eng" (not "en") german is named "deu", not "de"!)
+
+# set OCR language to English/default
+#config['ocr_lang'] = 'eng'
+
+# set OCR language to German/Deutsch
+#config['ocr_lang'] = 'deu'
+
+# set multiple OCR languages
+config['ocr_lang'] = 'eng+deu'
+
+
+#
+# Regex pattern for extraction
+#
+
+# Enable Regex plugin
+config['plugins'].append('enhance_regex')
+
+# Regex config for IBAN extraction
+config['regex_lists'].append('/etc/opensemanticsearch/regex/iban.tsv')
+
+
+#
+# Email address and email domain extraction
+#
+config['plugins'].append('enhance_extract_email')
+
+
+#
+# Phone number extraction
+#
+config['plugins'].append('enhance_extract_phone')
+
+
+#
+# Config for Named Entities Recognition (NER) and Named Entity Linking (NEL)
+#
+
+# Enable Entity Linking / Normalization and dictionary based Named Entities Extraction from thesaurus and ontologies
+config['plugins'].append('enhance_entity_linking')
+
+# Enable SpaCy NER plugin
+config['plugins'].append('enhance_ner_spacy')
+
+# Spacy NER Machine learning classifier (for which language and with which/how many classes)
+
+# Default classifier if no classifier for specific language
+
+# disable NER for languages where no classifier defined in config['spacy_ner_classifiers']
+config['spacy_ner_classifier_default'] = None
+
+# Set default classifier to English (only if you are sure, that all documents you index are english)
+# config['spacy_ner_classifier_default'] = 'en_core_web_sm'
+
+# Set default classifier to German (only if you are sure, that all documents you index are german)
+# config['spacy_ner_classifier_default'] = 'de_core_news_sm'
+
+# Language specific classifiers (mapping to autodetected document language to Spacy classifier / language)
+#
+# You have to download additional language classifiers for example english (en) or german (de) by
+# python3 -m spacy download en
+# python3 -m spacy download de
+# ...
+
+config['spacy_ner_classifiers'] = {
+    'da': 'da_core_news_sm',
+    'de': 'de_core_news_sm',
+    'en': 'en_core_web_sm',
+    'es': 'es_core_news_sm',
+    'fr': 'fr_core_news_sm',
+    'it': 'it_core_news_sm',
+    'lt': 'lt_core_news_sm',
+    'nb': 'nb_core_news_sm',
+    'nl': 'nl_core_news_sm',
+    'pl': 'pl_core_news_sm',
+    'pt': 'pt_core_news_sm',
+    'ro': 'ro_core_news_sm',
+}
+
+
+# Enable Stanford NER plugin
+#config['plugins'].append('enhance_ner_stanford')
+
+# Stanford NER Machine learning classifier (for which language and with how many classes, which need more computing time)
+
+# Default classifier if no classifier for specific language
+
+# disable NER for languages where no classifier defined in config['stanford_ner_classifiers']
+config['stanford_ner_classifier_default'] = None
+
+# Set default classifier to English (only if you are sure, that all documents you index are english)
+#config['stanford_ner_classifier_default'] = '/usr/share/java/stanford-ner/classifiers/english.all.3class.distsim.crf.ser.gz'
+
+# Set default classifier to German (only if you are sure, that all documents you index are german)
+#config['stanford_ner_classifier_default'] = '/usr/share/java/stanford-ner/classifiers/german.conll.germeval2014.hgc_175m_600.crf.ser.gz'
+
+# Language specific classifiers (mapping to autodetected document language)
+# Before you have to download additional language classifiers to the configured path
+config['stanford_ner_classifiers'] = {
+    'en': '/usr/share/java/stanford-ner/classifiers/english.all.3class.distsim.crf.ser.gz',
+    'es': '/usr/share/java/stanford-ner/classifiers/spanish.ancora.distsim.s512.crf.ser.gz',
+    'de': '/usr/share/java/stanford-ner/classifiers/german.conll.germeval2014.hgc_175m_600.crf.ser.gz',
+}
+
+# If Stanford NER JAR not in standard path
+config['stanford_ner_path_to_jar'] = "/usr/share/java/stanford-ner/stanford-ner.jar"
+
+# Stanford NER Java options like RAM settings
+config['stanford_ner_java_options'] = '-mx1000m'
+
+
+#
+# Law clauses extraction
+#
+
+config['plugins'].append('enhance_extract_law')
+
+
+#
+# Money extraction
+#
+
+config['plugins'].append('enhance_extract_money')
+
+
+#
+# Neo4j graph database
+#
+
+# exports named entities and relations to Neo4j graph database
+
+# Enable plugin to export entities and connections to Neo4j graph database
+#config['plugins'].append('export_neo4j')
+
+# Neo4j server
+#config['neo4j_host'] = 'localhost'
+
+# Username & password
+#config['neo4j_user'] = 'neo4j'
+#config['neo4j_password'] = 'neo4j'

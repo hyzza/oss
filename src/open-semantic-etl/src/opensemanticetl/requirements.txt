@@ -1,0 +1,16 @@
+celery
+feedparser
+lxml
+numerizer
+py2neo
+pycurl
+pyinotify
+pysolr
+python-dateutil
+requests
+rdflib
+scrapy
+SPARQLWrapper
+tika
+twint
+warcio

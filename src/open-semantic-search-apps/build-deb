@@ -1,0 +1,21 @@
+#/bin/sh
+
+VERSION=`date +%y.%m.%d`
+PACKAGE=open-semantic-search-apps_${VERSION}.deb
+BUILDDIR=/tmp/build-open-semantic-search-apps$$.deb
+
+#
+# Build package
+#
+
+echo "Building ${PACKAGE} in temp directory ${BUILDDIR}"
+
+mkdir ${BUILDDIR}
+cp -a DEBIAN ${BUILDDIR}/
+cp -a etc ${BUILDDIR}/
+cp -a var ${BUILDDIR}/
+mkdir -p ${BUILDDIR}/var/lib/opensemanticsearch/
+cp -a src/* ${BUILDDIR}/var/lib/opensemanticsearch/
+
+# Build deb
+dpkg -b ${BUILDDIR} ${PACKAGE}

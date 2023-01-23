@@ -1,0 +1,11 @@
+Package: tika-server
+Version: 2.3.0
+Section: misc
+Priority: optional
+Architecture: all
+Depends: default-jre-headless(>=0)
+Installed-Size: 100
+Maintainer: Markus Mandalka <debian@mandalka.name>
+Homepage: https://opensemanticsearch.org/
+Description: Apache Tika server
+ Extracts metadata and text from different file formats.

@@ -1,0 +1,12 @@
+Package: spacy-services
+Version: 20.10.09
+Section: misc
+Priority: optional
+Architecture: all
+Depends: python3-gunicorn(>=0), python3-pip(>=0), python3-dev(>=0), build-essential(>=0)
+Installed-Size: 100
+Maintainer: Markus Mandalka <debian@mandalka.name>
+Homepage: https://opensemanticsearch.org/
+Description: Spacy services
+ Spacy webservices.
+ Installs spacy and spacy-services rest microservice webapi displaycy

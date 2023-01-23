@@ -1,0 +1,9 @@
+# -*- coding: utf-8 -*-
+
+#
+# Additional custom config options for opensemanticsearch-index-file
+# (Overwriting or extending options in /etc/opensemanticsearch/connector-files)
+#
+
+# UI path navigator: Strip parts of path facet
+config['facet_path_strip_prefix'] = [ "file:///home/user/Documents/sf_", "file:///home/user/Documents/", "file://" ]

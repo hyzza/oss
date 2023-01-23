@@ -1,0 +1,288 @@
+---
+
+- name: Installation and configuration of/in Open Semantic Desktop Search VM
+  hosts: all
+  tasks:
+
+    - name: Add Debian Repos contrib and non-free
+      ansible.builtin.apt_repository:
+        repo: deb http://deb.debian.org/debian bullseye main contrib non-free
+        state: present
+      become: yes
+
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      apt:
+        upgrade: dist
+        update_cache: yes
+      become: yes
+
+    - name: Install Desktop environment
+      apt:
+        name: task-desktop
+      become: yes
+
+    - name: Stop Gnome Display Manager
+      ansible.builtin.service:
+        name: gdm
+        state: stopped
+      become: yes
+
+    - name: Install zenity
+      apt:
+        name: zenity
+      become: yes
+
+    - name: Copy Open Semantic Search deb package to VM
+      ansible.builtin.copy:
+        src: open-semantic-search.deb
+        dest: /open-semantic-search.deb
+      become: yes
+
+    - name: Install Open Semantic Search deb package
+      apt:
+        deb: /open-semantic-search.deb
+      become: yes
+
+    - name: Stop cron
+      ansible.builtin.service:
+        name: cron
+        state: stopped
+      become: yes
+
+    - name: Stop Flower
+      ansible.builtin.service:
+        name: flower
+        state: stopped
+      become: yes
+
+    - name: Stop Apache
+      ansible.builtin.service:
+        name: apache2
+        state: stopped
+      become: yes
+
+    - name: Stop spaCy
+      ansible.builtin.service:
+        name: spacy
+        state: stopped
+      become: yes
+
+    - name: Stop Filemonitoring
+      ansible.builtin.service:
+        name: opensemanticetl-filemonitoring
+        state: stopped
+      become: yes
+
+    - name: Stop ETL workers
+      ansible.builtin.service:
+        name: opensemanticetl
+        state: stopped
+      become: yes
+
+    - name: Stop RabbitMQ
+      ansible.builtin.service:
+        name: rabbitmq-server
+        state: stopped
+      become: yes
+
+    - name: Stop Solr
+      ansible.builtin.service:
+        name: solr
+        state: stopped
+      become: yes
+
+    - name: Stop Tika
+      ansible.builtin.service:
+        name: tika
+        state: stopped
+      become: yes
+
+    - name: Stop Tika Fake OCR service
+      ansible.builtin.service:
+        name: tika-fake-ocr
+        state: stopped
+      become: yes
+
+    - name: Remove deb package
+      file:
+        state: absent
+        path: /open-semantic-search.deb
+      become: yes
+
+    - name: Remove packages that are no longer required
+      apt:
+        autoremove: yes
+      become: yes
+
+    - name: Apt - Removes all packages from the package cache
+      command: apt-get clean
+      become: yes
+
+    - name: Delete cache of Python package manager pip
+      file:
+        state: absent
+        path: /root/.cache/pip
+      become: yes
+
+    - name: Add group vboxsf to user opensemanticetl for access to document index in shared folder
+      ansible.builtin.user:
+        name: opensemanticetl
+        groups: vboxsf
+        append: yes
+      become: yes
+
+    - name: Add group vboxsf to user solr for access to document index in shared folder
+      ansible.builtin.user:
+        name: solr
+        groups: vboxsf
+        append: yes
+      become: yes
+
+    - name: Copy custom ETL config files
+      ansible.builtin.copy:
+        src: etc/opensemanticsearch
+        dest: /etc/
+        owner: root
+        group: root
+      become: yes
+
+    # Todo: Idempotency
+    - name: Create Django superuser admin with password live
+      command: |
+        python3 /var/lib/opensemanticsearch/manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'user@localhost', 'live')"
+      become: yes
+
+    - name: Create group user
+      ansible.builtin.group:
+        name: user
+      become: yes
+
+    - name: Add user
+      ansible.builtin.user:
+        name: user
+        comment: User
+        group: user
+        shell: /bin/bash
+        # Add to group sudo for root access
+        # Add to group vboxsf for access to shared folders of the VM
+        groups: sudo, vboxsf
+        append: yes
+      become: yes
+
+    - name: Empty password for user
+      command: passwd -d user
+      become: yes
+
+    - name: Empty password for root
+      command: passwd -d root
+      become: yes
+
+    - name: Link Documents folder to shared folders mount path
+      file:
+        src: "/media"
+        dest: "/home/user/Documents"
+        state: link
+      become: yes
+
+    - name: Status shared folder for document index
+      stat: path=/media/sf_index
+      register: data_solr
+      become: yes
+
+    - name: Move document index to shared folder
+      command: mv /var/solr/data/opensemanticsearch/data /media/sf_index
+      when: not data_solr.stat.exists
+      become: yes
+
+    - name: Link old pathname of document index to this shared folder
+      file:
+        src: "/media/sf_index"
+        dest: "/var/solr/data/opensemanticsearch/data"
+        state: link
+      become: yes
+
+    - name: Allow Firefox to open local file links linked by localhost
+      ansible.builtin.copy:
+        src: etc/firefox
+        dest: /etc/
+        owner: root
+        group: root
+      become: yes
+
+    - name: Copy GUI scripts to usr/bin
+      ansible.builtin.copy:
+        src: usr/bin
+        dest: /usr/
+        owner: root
+        group: root
+        mode: 0755
+      become: yes
+
+    - name: Copy home with Gnome app configs of the GUI scripts
+      ansible.builtin.copy:
+        src: home/user
+        dest: /home/
+        owner: user
+        group: user
+      become: yes
+
+    - name: Add this Gnome apps to favorites / application sidebar
+      community.general.dconf:
+        key: "/org/gnome/shell/favorite-apps"
+        value: "['search.desktop', 'thesaurus.desktop', 'extract-entities.desktop', 'search-list.desktop', 'index-documents.desktop', 'firefox-esr.desktop', 'org.gnome.Nautilus.desktop', 'yelp.desktop']"
+        state: present
+      become: yes
+      become_user: user
+
+    - name: Disable automatic screen lock
+      community.general.dconf:
+        key: "/org/gnome/desktop/screensaver/lock-enabled"
+        value: "false"
+        state: present
+      become: yes
+      become_user: user
+
+    - name: Set User for AutomaticLogin
+      lineinfile:
+        path: /etc/gdm3/daemon.conf
+        regexp: '^AutomaticLogin ='
+        insertafter: '^# Enabling automatic login'
+        line: 'AutomaticLogin = user'
+      become: yes
+
+    - name: Enable AutomaticLogin
+      lineinfile:
+        path: /etc/gdm3/daemon.conf
+        regexp: '^AutomaticLoginEnable ='
+        insertafter: '^# Enabling automatic login'
+        line: 'AutomaticLoginEnable = true'
+      become: yes
+
+    - name: Overwrite deleted files with zeros for better compression of disk image export
+      shell: dd if=/dev/zero of=/ZEROS bs=1M; sync; rm -f /ZEROS
+      become: yes
+
+    - name: Create swap file
+      command: fallocate -l 4G /swapfile
+      become: yes
+
+    - name: change swap file permissions
+      file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: 0600
+      become: yes
+
+    - name: Format swap file
+      command: mkswap /swapfile
+      become: yes
+
+    - name: Mount entry for swap file
+      mount:
+        src: /swapfile
+        path: none
+        fstype: swap
+        opts: sw
+        state: present
+      become: yes

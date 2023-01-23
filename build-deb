@@ -1,0 +1,222 @@
+#!/bin/bash
+
+PACKAGE=open-semantic-search.deb
+BUILDDIR=/tmp/open-semantic-search-$$.deb
+INCLUDE_PACKAGES="solr.deb tika-server.deb spacy-services.deb open-semantic-etl solr-php-ui open-semantic-search-apps solr-synonames flower"
+
+# Change dir to src dir (for the case this build script is started from other dir)
+cd "$(dirname "$0")"
+
+echo "Building ${PACKAGE} in temp directory ${BUILDDIR}"
+mkdir ${BUILDDIR}
+mkdir ${BUILDDIR}/opt
+
+cp -a DEBIAN ${BUILDDIR}/
+
+
+#
+# Include Debian subpackages metadata and install scripts
+#
+
+for INCLUDE_PACKAGE in $INCLUDE_PACKAGES ; do
+
+    echo "Including ${INCLUDE_PACKAGE}"
+
+    # Append conffiles names from the included package to our conffiles info
+    [ -f src/${INCLUDE_PACKAGE}/DEBIAN/conffiles ] && cat src/${INCLUDE_PACKAGE}/DEBIAN/conffiles >> ${BUILDDIR}/DEBIAN/conffiles
+
+    # Copy postinst files, which will be called from our postint script
+    if [ -f src/${INCLUDE_PACKAGE}/DEBIAN/postinst ]
+    then
+
+	cp src/${INCLUDE_PACKAGE}/DEBIAN/postinst ${BUILDDIR}/opt/postinst.${INCLUDE_PACKAGE}
+
+        # Add call to postinst script
+	cat << EOF >> ${BUILDDIR}/DEBIAN/postinst
+
+	    if [ -f /opt/postinst.${INCLUDE_PACKAGE} ]
+	    then
+	        if /opt/postinst.${INCLUDE_PACKAGE}
+	        then
+		        rm /opt/postinst.${INCLUDE_PACKAGE}
+	        else
+	            exit 1
+	        fi
+	    fi
+EOF
+
+
+    fi
+
+done
+
+mkdir -p ${BUILDDIR}/usr/lib/python3/dist-packages
+
+#
+# Include Open Semantic ETL
+#
+
+cp -a src/open-semantic-etl/etc ${BUILDDIR}/
+cp -a src/open-semantic-etl/usr ${BUILDDIR}/
+cp -a src/open-semantic-etl/src/opensemanticetl ${BUILDDIR}/usr/lib/python3/dist-packages/
+cp -a src/open-semantic-etl/src/tesseract-ocr-cache/tesseract_cache ${BUILDDIR}/usr/lib/python3/dist-packages/
+cp -a src/open-semantic-etl/src/tesseract-ocr-cache/tesseract_fake ${BUILDDIR}/usr/lib/python3/dist-packages/
+mkdir -p ${BUILDDIR}/var/opensemanticsearch/media/thumbnails
+mkdir -p ${BUILDDIR}/var/cache/tesseract
+
+#
+# Include flower
+#
+
+cp -a src/flower/etc ${BUILDDIR}/
+
+
+#
+# Include Open Semantic Search Apps
+#
+
+cp -a src/open-semantic-search-apps/etc ${BUILDDIR}/
+cp -a src/open-semantic-search-apps/var ${BUILDDIR}/
+mkdir -p ${BUILDDIR}/var/lib/opensemanticsearch/
+cp -a src/open-semantic-search-apps/src/* ${BUILDDIR}/var/lib/opensemanticsearch/
+
+#
+# Include docs
+#
+
+mkdir -p ${BUILDDIR}/usr/share/doc/open-semantic-search
+cp -a docs ${BUILDDIR}/usr/share/doc/open-semantic-search/
+cp mkdocs.yml ${BUILDDIR}/usr/share/doc/open-semantic-search/
+
+mkdocs build --config-file ${BUILDDIR}/usr/share/doc/open-semantic-search/mkdocs.yml
+
+#
+# Include solr-php-ui
+#
+cp -a src/solr-php-ui/etc ${BUILDDIR}/
+
+mkdir -p ${BUILDDIR}/usr/share/solr-php-ui/
+cp -a src/solr-php-ui/src/* ${BUILDDIR}/usr/share/solr-php-ui/
+
+# Move config from php directory config to systems config directory /etc
+mv ${BUILDDIR}/usr/share/solr-php-ui/config/* ${BUILDDIR}/etc/solr-php-ui
+
+# link from deleted php directory to this new config destination
+rmdir ${BUILDDIR}/usr/share/solr-php-ui/config
+ln -s /etc/solr-php-ui/ ${BUILDDIR}/usr/share/solr-php-ui/config
+
+
+#
+# Include solr.deb
+#
+
+# read $SOLR_VERSION and $SOLR_URL from config file solr-version.env
+
+source src/solr.deb/solr-version.env
+
+# if not yet there, download Solr binary release
+if [ ! -f "src/solr.deb/usr/src/solr-$SOLR_VERSION.tgz" ]; then
+    mkdir src/solr.deb/usr
+    mkdir src/solr.deb/usr/src
+    echo "Downloading Solr"
+    wget -P src/solr.deb/usr/src/ $SOLR_URL
+fi
+
+cp -a src/solr.deb/etc ${BUILDDIR}/
+cp -a src/solr.deb/var ${BUILDDIR}/
+cp -a src/solr.deb/usr ${BUILDDIR}/
+
+
+#
+# Include solr-synonames
+#
+
+mkdir -p ${BUILDDIR}/usr/share/synonames
+cp src/solr-synonames/aleph-elasticsearch/synonames.txt ${BUILDDIR}/usr/share/synonames/
+cp src/solr-synonames/synonames2solr.py ${BUILDDIR}/usr/lib/python3/dist-packages/
+
+
+#
+# Include tika-server.deb
+#
+
+# read $TIKA_VERSION and $TIKA_URL from config file tika-version.env
+source src/tika-server.deb/tika-version.env
+
+# if not yet there, download Tika-server binary release
+if [ ! -f "src/tika-server.deb/usr/share/java/tika-server-standard-$TIKA_VERSION.jar" ]; then
+    echo "Downloading Tika"
+    wget -P src/tika-server.deb/usr/share/java/ $TIKA_URL
+fi
+
+cp -a src/tika-server.deb/etc ${BUILDDIR}/
+
+mkdir -p ${BUILDDIR}/usr/share/java/
+cp src/tika-server.deb/usr/share/java/tika-server-standard-$TIKA_VERSION.jar ${BUILDDIR}/usr/share/java/
+
+ln -s tika-server-standard-$TIKA_VERSION.jar ${BUILDDIR}/usr/share/java/tika-server-standard.jar
+
+
+# set rights
+chown -R root:root ${BUILDDIR}/
+chmod g+r ${BUILDDIR}/usr/share/java/tika-server*
+chmod o+r ${BUILDDIR}/usr/share/java/tika-server*
+
+
+#
+# Include python-tika since no official Debian package yet
+#
+
+# copy python-tika library to created python libraries directory
+cp -a src/tika-python/tika ${BUILDDIR}/usr/lib/python3/dist-packages/
+
+#
+# Include Open Semantic Entity Search API
+#
+
+cp -a src/open-semantic-entity-search-api/src/entity_import ${BUILDDIR}/usr/lib/python3/dist-packages/
+cp -a src/open-semantic-entity-search-api/src/entity_linking ${BUILDDIR}/usr/lib/python3/dist-packages/
+cp -a src/open-semantic-entity-search-api/src/entity_manager ${BUILDDIR}/usr/lib/python3/dist-packages/
+cp -a src/open-semantic-entity-search-api/src/entity_rest_api ${BUILDDIR}/var/lib/opensemanticsearch/
+cp -a src/open-semantic-entity-search-api/src/solr/* ${BUILDDIR}/var/solr/data/
+
+#
+# Include spacy-services.deb
+#
+
+cp -a src/spacy-services.deb/etc ${BUILDDIR}/
+cp -a src/spacy-services.deb/src/spacy-services ${BUILDDIR}/usr/lib/python3/dist-packages/
+
+
+#
+# Include Solr Relevance Ranking Analysis Tool
+#
+
+cp -a src/solr-relevance-ranking-analysis/src/solr_relevance_ranking_analysis ${BUILDDIR}/var/lib/opensemanticsearch/
+
+
+#
+# Include Open Semantic Visual Linked Data Explorer
+#
+
+cp -a src/open-semantic-visual-graph-explorer/src/* ${BUILDDIR}/var/lib/opensemanticsearch/
+
+# and its base / dependencies cytoscape.js and cytoscape.js-panzoom
+mkdir ${BUILDDIR}/var/lib/opensemanticsearch/visual_graph_explorer/static/
+cp -a src/cytoscape.js/dist/* ${BUILDDIR}/var/lib/opensemanticsearch/visual_graph_explorer/static/
+cp -a src/cytoscape.js-panzoom/cytoscape-panzoom.js ${BUILDDIR}/var/lib/opensemanticsearch/visual_graph_explorer/static/
+cp -a src/cytoscape.js-panzoom/cytoscape.js-panzoom.css ${BUILDDIR}/var/lib/opensemanticsearch/visual_graph_explorer/static/
+cp -a src/cytoscape.js-panzoom/font-awesome-4.0.3 ${BUILDDIR}/var/lib/opensemanticsearch/visual_graph_explorer/static/
+
+#
+# Include Solr-Ontology-Tagger
+#
+
+cp -a src/solr-ontology-tagger/src/* ${BUILDDIR}/usr/lib/python3/dist-packages/
+
+
+#
+# Build deb
+#
+
+dpkg -b ${BUILDDIR} ${PACKAGE}

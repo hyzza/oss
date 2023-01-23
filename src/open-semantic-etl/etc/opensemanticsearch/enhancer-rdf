@@ -1,0 +1,38 @@
+# -*- coding: utf-8 -*-
+
+# Config for RDF metadata server
+
+# URL of the meta data server (RDF)
+# if set to False don't use additional metadata from server (like tags or annotations)
+#
+# Templates:
+# [uri] for URL of annotated page
+# [uri_md5] for MD5 Sum of the URL
+
+config['metaserver'] = False
+
+# Use Drupal as meta server
+#config['metaserver'] = [ 'http://localhost/drupal/rdf?uri=[uri]' ]
+
+# Use Semantic Mediawiki as meta server
+#config['metaserver'] = [ 'http://localhost/mediawiki/index.php/Special:ExportRDF?xmlmime=rdf&page=[uri_md5]' ]
+
+# Use tagger app as meta server
+config['metaserver'] = [ 'http://localhost/search-apps/annotate/rdf?uri=[uri]' ]
+
+# mapping of RDF properties or RDF classes to facets / columns
+config['property2facet'] = {
+ 'http://www.wikidata.org/entity/Q5': 'person_ss',
+ 'http://www.wikidata.org/entity/Q43229': 'organization_ss',
+ 'http://www.wikidata.org/entity/Q178706': 'organization_ss',
+ 'http://www.wikidata.org/entity/Q18810687': 'organization_ss',
+ 'http://www.wikidata.org/entity/Q2221906': 'location_ss',
+ 'http://schema.org/Person': 'person_ss',
+ 'http://schema.org/Organization': 'organization_ss',
+ 'http://schema.org/Place': 'location_ss',
+ 'http://schema.org/location': 'location_ss',
+ 'http://schema.org/address': 'location_ss',
+ 'http://schema.org/keywords': 'tag_ss',
+ 'http://schema.org/Comment': 'comment_txt',
+ 'http://semantic-mediawiki.org/swivt/1.0#specialProperty_dat': 'meta_date_dts'
+}

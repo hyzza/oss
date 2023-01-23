@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# if no Java yet, exit
+
+if ! java -version
+then
+    echo "No Java installation found. Please try again after Java has been installed (automatically because of package dependencies)"
+    exit 1
+fi
+
+# create tempdir for extraction of the Solr installer
+TEMPDIR="/tmp/solr_installation_$$"
+mkdir ${TEMPDIR}
+
+SOLR_ARCHIVE=/usr/src/solr-*.tgz
+
+# The archived files are in a versioned path like solr-x.y.z
+# infer this path from the archive filename which is like /downloadpath/solr-x.y.z.tgz by filename without path by basename with parameter for strip the .tgz suffix
+SOLR_ARCHIVED_DIRNAME=`basename ${SOLR_ARCHIVE} .tgz`
+
+# extract only the installer (which uses the archive for installation)
+tar -xzf ${SOLR_ARCHIVE} --directory ${TEMPDIR} ${SOLR_ARCHIVED_DIRNAME}/bin/install_solr_service.sh --directory ${TEMPDIR}
+
+# prevent that call of "service solr status" in Solr installer waits for quitting pager by manual pressing of q
+export SYSTEMD_PAGER=""
+
+# start extracted Solr installer to install Solr as daemon
+if ${TEMPDIR}/${SOLR_ARCHIVED_DIRNAME}/bin/install_solr_service.sh ${SOLR_ARCHIVE} -f
+then
+
+    # Solr installation seems ok
+
+    echo "Removing Solr installation script and archive"
+    rm /usr/src/${SOLR_ARCHIVED_DIRNAME}.tgz
+    rm ${TEMPDIR}/${SOLR_ARCHIVED_DIRNAME}/bin/install_solr_service.sh
+    rmdir ${TEMPDIR}/${SOLR_ARCHIVED_DIRNAME}/bin
+    rmdir ${TEMPDIR}/${SOLR_ARCHIVED_DIRNAME}
+    rmdir ${TEMPDIR}
+
+else
+    # If Solr install script ends with error, we do, too
+    exit 1
+fi

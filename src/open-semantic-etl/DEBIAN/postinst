@@ -1,0 +1,28 @@
+#!/bin/sh
+
+adduser --system --disabled-password opensemanticetl
+groupadd -r tesseract_cache
+usermod -a -G tesseract_cache opensemanticetl
+
+# rights for OCR cache
+chown opensemanticetl:tesseract_cache /var/cache/tesseract
+chmod 770 /var/cache/tesseract
+
+# rights for thumbnail dir
+chown opensemanticetl /var/opensemanticsearch/media/thumbnails
+chmod o+w /var/opensemanticsearch/media/thumbnails
+
+
+# install dependencies
+pip3 install -r /usr/lib/python3/dist-packages/opensemanticetl/requirements.txt
+
+
+# load our additional systemd service config
+systemctl daemon-reload
+
+# start while booting
+systemctl enable opensemanticetl
+systemctl enable opensemanticetl-filemonitoring
+
+# (re)start after installation (or upgrade)
+systemctl restart opensemanticetl

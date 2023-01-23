@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# install dependencies like SpaCy and language specific models
+pip3 install -r /usr/lib/python3/dist-packages/spacy-services/displacy/requirements.txt
+
+# daemon will run as separated user
+adduser --system --disabled-password spacy
+
+# load our additional systemd service config
+systemctl daemon-reload
+
+# start while booting
+systemctl enable spacy
+
+# (re)start after installation (or upgrade)
+systemctl restart spacy

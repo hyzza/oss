@@ -1,0 +1,11 @@
+#!/bin/sh
+
+systemctl disable opensemanticetl-filemonitoring
+
+systemctl stop opensemanticetl-filemonitoring
+
+systemctl disable opensemanticetl
+
+systemctl stop opensemanticetl
+
+exit 0

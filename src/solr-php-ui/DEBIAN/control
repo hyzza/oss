@@ -1,0 +1,11 @@
+Package: solr-php-ui
+Version: 19.11.05
+Section: misc
+Priority: optional
+Architecture: all
+Depends: php(>=0), php-bcmath(>=0), php-xml(>=0)
+Installed-Size: 100
+Maintainer: Markus Mandalka <info@opensemanticsearch.org>
+Homepage: https://opensemanticsearch.org/
+Description: Solr Search user interface
+ Userinterface for searching.
